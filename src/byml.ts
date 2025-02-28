@@ -287,20 +287,33 @@ class GrowableBuffer {
         this.maybeGrow(0, initialSize);
     }
 
-    public maybeGrow(newUserSize: number, newBufferSize: number = newUserSize): void {
-        if (newUserSize > this.userSize)
-            this.userSize = newUserSize;
+public maybeGrow(newUserSize: number, newBufferSize: number = newUserSize): void {
+    if (newUserSize > this.userSize)
+        this.userSize = newUserSize;
 
-        if (newBufferSize > this.bufferSize) {
-            this.bufferSize = align(newBufferSize, this.growAmount);
-            this.buffer = this.buffer.transfer(this.bufferSize);
-            this.view = new DataView(this.buffer);
-        }
+    if (newBufferSize > this.bufferSize) {
+        const oldBuffer = this.buffer;
+        const oldView = new Uint8Array(oldBuffer);
+        
+        this.bufferSize = align(newBufferSize, this.growAmount);
+        this.buffer = new ArrayBuffer(this.bufferSize);
+        
+        // Copy the old buffer contents to the new buffer
+        const newView = new Uint8Array(this.buffer);
+        newView.set(oldView);
+        
+        this.view = new DataView(this.buffer);
     }
+}
+
 
     public finalize(): ArrayBuffer {
-        return this.buffer.transfer(this.userSize);
-    }
+        const finalBuffer = new ArrayBuffer(this.userSize);
+        const finalView = new Uint8Array(finalBuffer);
+        const currentView = new Uint8Array(this.buffer, 0, this.userSize);
+        finalView.set(currentView);
+        return finalBuffer;
+        }
 }
 
 function setUint24(view: DataView, offs: number, v: number, littleEndian: boolean) {
